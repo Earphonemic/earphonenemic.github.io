@@ -1,0 +1,86 @@
+The Netlify deploy errored, with the following guidance provided:
+
+Diagnosis
+
+- Relevant error lines: [line 19](#L19), the conflict markers around the lockfile portion at [line 22](#L22)-[line 24](#L24) and repeated at [line 31](#L31)-[line 34](#L34), and the final failure lines [line 45](#L45)-[line 46](#L46).
+- Error type and cause: pnpm failed while parsing a YAML lockfile because it contains unresolved Git merge conflict markers ("<<<<<<< HEAD", "=======", ">>>>>>>"). The YAML parser treats these markers as invalid syntax and aborts install (see the "can not read a block mapping entry" parse error at [line 19](#L19) triggered by the conflict marker at [line 23](#L23)).
+
+Solution
+
+1) Inspect and resolve the lockfile conflict
+- The problematic file is the repository lockfile (pnpm-lock.yaml). Open pnpm-lock.yaml and remove the Git conflict markers, resolving which side of the conflict to keep for each section. If you prefer, use a merge tool to choose the correct content.
+- Example manual steps:
+```bash
+# show files with conflicts
+git status
+
+# open the lockfile and edit pnpm-lock.yaml to remove <<<<<<<, =======, >>>>>>> markers
+# After editing:
+git add pnpm-lock.yaml
+git commit -m "Resolve pnpm-lock.yaml merge conflict"
+git push
+```
+
+2) Alternatively regenerate the lockfile (if you prefer to replace it)
+- Use pnpm to regenerate the lockfile (recommended if your project uses pnpm). This will create a clean pnpm-lock.yaml without conflict markers.
+```bash
+git checkout -- pnpm-lock.yaml   # if you want to discard local changes first (optional)
+rm -rf node_modules
+rm pnpm-lock.yaml
+pnpm install
+git add pnpm-lock.yaml
+git commit -m "Regenerate pnpm-lock.yaml"
+git push
+```
+- If your project standard is npm, ensure you and CI use the same package manager. If you remove pnpm-lock.yaml, be sure your team agrees and CI/build commands are updated accordingly.
+
+3) Re-run the Netlify build
+- After committing the resolved or regenerated pnpm-lock.yaml, push to the branch Netlify builds from. The new build should proceed past dependency installation.
+
+Notes and checks
+- If you see merge conflicts locally (git status will show unmerged paths), resolve them before pushing.
+- If you want me to point to the exact lockfile in your repo, I can (e.g. pnpm-lock.yaml at the repo root).
+
+The relevant error logs are:
+
+Line 7: Custom build path detected. Proceeding with the specified path: ''
+Line 8: Custom build command detected. Proceeding with the specified command: 'npm install --legacy-peer-deps && npm run build'
+Line 9: Installing dependencies
+Line 10: mise ~/.config/mise/config.toml tools: python@3.14.3
+Line 11: mise ~/.config/mise/config.toml tools: ruby@3.4.8
+Line 12: mise ~/.config/mise/config.toml tools: go@1.26.2
+Line 13: v20.20.2 is already installed.
+Line 14: Now using node v20.20.2 (npm v10.8.2)
+Line 15: Enabling Node.js Corepack
+Line 16: pnpm workspaces detected
+Line 17: Failed during stage 'Install dependencies': dependency_installation script returned non-zero exit code: 1
+Line 18: Installing npm packages using pnpm version 10.30.3
+Line 19:  ERROR  can not read a block mapping entry; a multiline key may not be an implicit key (456:9)
+Line 20:  453 |   - '@tailwindcss/oxide@4.1.12'
+Line 21:  454 |   - esbuild@0.25.10
+Line 22:  455 | <<<<<<< HEAD
+Line 23:  456 | prunedAt: Fri, 05 Jun 2026 05:01:35 GMT
+Line 24: ---------------^
+Line 25:  457 | =======
+Line 26:  458 | <<<<<<< HEAD
+Line 27: pnpm: can not read a block mapping entry; a multiline key may not be an implicit key (456:9)
+Line 28:  453 |   - '@tailwindcss/oxide@4.1.12'
+Line 29:  454 |   - esbuild@0.25.10
+Line 30:  455 | <<<<<<< HEAD
+Line 31:  456 | prunedAt: Fri, 05 Jun 2026 05:01:35 GMT
+Line 32: ---------------^
+Line 33:  457 | =======
+Line 34:  458 | <<<<<<< HEAD
+Line 35:     at generateError (/opt/buildhome/.cache/node/corepack/v1/pnpm/10.30.3/dist/pnpm.cjs:11368:14)
+Line 36:     at throwError (/opt/buildhome/.cache/node/corepack/v1/pnpm/10.30.3/dist/pnpm.cjs:11371:13)
+Line 37:     at readBlockMapping (/opt/buildhome/.cache/node/corepack/v1/pnpm/10.30.3/dist/pnpm.cjs:12002:13)
+Line 38:     at composeNode (/opt/buildhome/.cache/node/corepack/v1/pnpm/10.30.3/dist/pnpm.cjs:12205:82)
+Line 39:     at readDocument (/opt/buildhome/.cache/node/corepack/v1/pnpm/10.30.3/dist/pnpm.cjs:12335:7)
+Line 40:     at loadDocuments (/opt/buildhome/.cache/node/corepack/v1/pnpm/10.30.3/dist/pnpm.cjs:12377:9)
+Line 41:     at Object.load (/opt/buildhome/.cache/node/corepack/v1/pnpm/10.30.3/dist/pnpm.cjs:12395:23)
+Line 42:     at parse2 (/opt/buildhome/.cache/node/corepack/v1/pnpm/10.30.3/dist/pnpm.cjs:13155:33)
+Line 43:     at /opt/buildhome/.cache/node/corepack/v1/pnpm/10.30.3/dist/pnpm.cjs:13156:80
+Line 44:     at async readModulesManifest (/opt/buildhome/.cache/node/corepack/v1/pnpm/10.30.3/dist/pnpm.cjs:119285:22)
+Line 45: Error during pnpm install
+Line 46: Failing build: Failed to install dependencies
+Line 47: Finished processing build request in 15.429s
